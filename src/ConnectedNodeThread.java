@@ -12,11 +12,13 @@ public class ConnectedNodeThread implements Runnable{
     private String hostIP;
     private int hostPort;
     private File folder;
+    private String id;
 
-    public ConnectedNodeThread(String hostIP, int hostPort, File folder) {
+    public ConnectedNodeThread(String hostIP, int hostPort, File folder, String id) {
         this.hostIP = hostIP;
         this.hostPort = hostPort;
         this.folder = folder;
+        this.id = id;
     }
 
     @Override
@@ -26,7 +28,6 @@ public class ConnectedNodeThread implements Runnable{
             ClientNodeImplementation node = new ClientNodeImplementation();
             Server stub = (Server) registry.lookup("Node");
             System.out.println("Connected to Node " + hostIP + ": " + hostPort);
-            String id = UUID.randomUUID().toString();
             stub.registerNode(node, id);
             System.out.println("Client registered, waiting for notification");
             synchronized (node) {

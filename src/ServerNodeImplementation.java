@@ -16,7 +16,6 @@ public class ServerNodeImplementation extends UnicastRemoteObject implements Ser
     private File folder;
 
 
-
     protected ServerNodeImplementation(File folder) throws IOException, NoSuchAlgorithmException {
         this.folder = folder;
         updateFilesMap();

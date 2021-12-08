@@ -1,15 +1,12 @@
-
-/*
-    args isolated: isolated port-to-expose path-to-folder-with-contents
-    args connected: connected host-ip host-port port-to-expose path-to-folder-with-contents
-    portatil florin: 192.168.1.131
-    portatil florin-work: 192.168.1.26
- */
 import java.io.File;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.util.UUID;
-import java.util.regex.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-public class Node {
+public class TrueNode {
     public static void main(String args[]) {
         String id = UUID.randomUUID().toString();
         if (args.length == 3 && args[0].equals("isolated")) {
@@ -34,11 +31,27 @@ public class Node {
             System.err.println("- Start as connected node: connected host-ip host-port port-to-expose path-to-folder-with-contents");
             System.exit(0);
         }
-
     }
 
+    private static Registry startRegistry(Integer port) throws RemoteException {
+        try {
+            Registry registry = LocateRegistry.getRegistry(port);
+            registry.list( );
+            // The above call will throw an exception
+            // if the registry does not already exist
+            return registry;
+        }
 
-    public static boolean isValidIPAddress(String ip) {
+        catch (RemoteException ex) {
+            // No valid registry at that port.
+            System.out.println("RMI registry cannot be located " );
+            Registry registry= LocateRegistry.createRegistry(port);
+            System.out.println("RMI registry created at port " + port);
+            return registry;
+        }
+    }
+
+    private static boolean isValidIPAddress(String ip) {
         // Regex for digit from 0 to 255.
         String zeroTo255
                 = "(\\d{1,2}|(0|1)\\"

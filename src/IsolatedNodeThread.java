@@ -10,10 +10,12 @@ public class IsolatedNodeThread implements Runnable{
 
     private int exposedPort;
     private File folder;
+    private String id;
 
-    public IsolatedNodeThread(int exposedPort, File folder) {
+    public IsolatedNodeThread(int exposedPort, File folder, String id) {
         this.exposedPort = exposedPort;
         this.folder = folder;
+        this.id = id;
     }
 
     @Override
@@ -49,6 +51,7 @@ public class IsolatedNodeThread implements Runnable{
             // if the registry does not already exist
             return registry;
         }
+
         catch (RemoteException ex) {
             // No valid registry at that port.
             System.out.println(ANSI_PURPLE + "RMI registry cannot be located " + ANSI_RESET);
