@@ -9,7 +9,9 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
 public class ClientNodeImplementation extends UnicastRemoteObject implements Client {
+
     protected ClientNodeImplementation() throws RemoteException {
+
     }
 
     protected ClientNodeImplementation(int port) throws RemoteException {
@@ -72,14 +74,14 @@ public class ClientNodeImplementation extends UnicastRemoteObject implements Cli
         return files;
     }
 
-    @Override
+    /*@Override
     public void saveFile(FileContents file) throws RemoteException {
         try {
-            final Path path = Paths.get("./files/" + file.getName());
+            final Path path = Paths.get(argsPath + file.getName());
             final BufferedWriter writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8, StandardOpenOption.CREATE);
         } catch (Exception e) {
             System.err.println("Error writing file: " + file.getName());
             e.printStackTrace();
         }
-    }
+    }*/
 }

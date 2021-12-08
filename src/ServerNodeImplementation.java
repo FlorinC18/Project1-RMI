@@ -13,13 +13,13 @@ public class ServerNodeImplementation extends UnicastRemoteObject implements Ser
     private Map<String, Client> nodes = new HashMap<>();
     private Map<String, FileContents> filesMap = new HashMap<>();
     private String lastAddedNodeId;
-    final private File folder = new File("./files");
+    private File folder;
 
 
 
-    protected ServerNodeImplementation() throws IOException, NoSuchAlgorithmException {
+    protected ServerNodeImplementation(File folder) throws IOException, NoSuchAlgorithmException {
+        this.folder = folder;
         updateFilesMap();
-
     }
 
     protected ServerNodeImplementation(int port) throws RemoteException {
