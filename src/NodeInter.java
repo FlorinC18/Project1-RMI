@@ -8,11 +8,12 @@ import java.util.Map;
 public interface NodeInter extends Remote {
     // SERVER
     void registerNode(NodeInter node, String id) throws RemoteException;
-    Map<String, FileContents> getListOfFiles() throws IOException, NoSuchAlgorithmException;
+    Map<String, NewFileContents> getListOfFiles(Map<String, NewFileContents> currentList, List<String> alreadyAskedNodes) throws IOException, NoSuchAlgorithmException;
     byte[] downloadFileFromServer(String fileHash) throws RemoteException;
+    String getId() throws RemoteException;
 
 
     // CLIENT
     void notifyRegistered(String id) throws RemoteException;
-    List<String> selectFiles(Map<String, FileContents> fileContentsMap) throws RemoteException;
+    List<String> selectFiles(Map<String, NewFileContents> fileContentsMap) throws RemoteException;
 }

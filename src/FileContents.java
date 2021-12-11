@@ -11,6 +11,9 @@ public class FileContents implements Serializable, Remote {
     private String description;
     private List<String> keywords;
 
+    public FileContents() {
+    }
+
     public FileContents(File file) {
         this.file = file;
         name = file.getName();

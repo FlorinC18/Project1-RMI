@@ -1,35 +1,108 @@
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.UUID;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class TrueNode {
-    public static void main(String args[]) {
-        String id = UUID.randomUUID().toString();
-        if (args.length == 3 && args[0].equals("isolated")) {
-            File folder = new File(args[2]);
-            if (folder.exists() && folder.isDirectory()) {
-                IsolatedNodeThread isolatedServerThread = new IsolatedNodeThread(Integer.parseInt(args[1]), folder, id);
-                new Thread(isolatedServerThread).start();
-            }
-        } else if (args.length == 5 && args[0].equals("connected") && isValidIPAddress(args[1])) {
-            File folder = new File(args[4]);
-            if (folder.exists() && folder.isDirectory()) {
-                IsolatedNodeThread connectedServerThread = new IsolatedNodeThread(Integer.parseInt(args[3]), folder, id);
-                ConnectedNodeThread clientThread = new ConnectedNodeThread(args[1], Integer.parseInt(args[2]), folder, id);
-                new Thread(connectedServerThread).start();
-                new Thread(clientThread).start();
-            }
-        } else {
-            System.err.println(args.length);
+/*
+    args isolated: isolated port-to-expose path-to-folder-with-contents
+    args connected: connected host-ip host-port port-to-expose path-to-folder-with-contents
+    portatil florin: 192.168.1.131
+    portatil florin-work: 192.168.1.26
 
+    TrueNode:::
+    args: port-to-expose path-to-folder host-ip host-port
+ */
+
+public class TrueNode {
+    private static int exposedPort;
+    private static File folder;
+    private static String hostIP;
+    private static int hostPort;
+    private static String id;
+    private static String mode;
+
+
+    public static void main(String args[]) throws IOException, NoSuchAlgorithmException {
+        id = UUID.randomUUID().toString();
+        if (args.length == 4) {
+            exposedPort = Integer.parseInt(args[0]);
+            folder = new File(args[1]);
+            hostIP = args[2];
+            hostPort = Integer.parseInt(args[3]);
+            mode = "connected";
+        } else if (args.length == 2) {
+            exposedPort = Integer.parseInt(args[0]);
+            folder = new File(args[1]);
+            hostIP = null;
+            hostPort = 0;
+            mode = "isolated";
+        } else {
             System.err.println("Parameters needed for execution:");
-            System.err.println("- Start as isolated node: isolated port-to-expose path-to-folder-with-contents");
-            System.err.println("- Start as connected node: connected host-ip host-port port-to-expose path-to-folder-with-contents");
+            System.err.println("port-to-expose path-to-folder host-ip host-port");
             System.exit(0);
+        }
+
+        if (folder.exists() && folder.isDirectory()) {
+            // isolated
+            if (mode.equals("isolated")) {
+                NodeImplementation node = new NodeImplementation(folder, id, exposedPort);
+                ServerThread serverThread = new ServerThread(exposedPort, node);
+                new Thread(serverThread).start();
+            }
+
+            // connected
+            if (isValidIPAddress(hostIP) && hostPort != 0){
+                try {
+                    Registry registry = LocateRegistry.getRegistry(hostIP, hostPort);
+                    NodeInter stub = (NodeInter) registry.lookup("Node");
+                    System.out.println("Connected to Node " + hostIP + ": " + hostPort);
+                    NodeImplementation node = new NodeImplementation(folder, id, stub, exposedPort);
+                    if (mode.equals("connected")) {
+                        ServerThread serverThread = new ServerThread(exposedPort, node);
+                        new Thread(serverThread).start();
+                    }
+                    stub.registerNode(node, id);
+                    System.out.println("Client registered, waiting for notification");
+//                    synchronized (node) {
+//                        node.wait();
+                    Map<String, NewFileContents> contentsOnTheNetwork = new HashMap<>();
+                    List<String> nodeIds = new ArrayList<>();
+                    contentsOnTheNetwork = stub.getListOfFiles(contentsOnTheNetwork, nodeIds);
+                    if (contentsOnTheNetwork.isEmpty()) {
+                        System.out.println("esta feo q no trobis res imbesil");
+                    }
+                    for (NewFileContents file: contentsOnTheNetwork.values()) {
+                        System.out.println(file.toString());
+                    }
+
+//                    List<String> fileHashes = node.selectFiles(contentsOnTheNetwork);
+//                    for (String hash: fileHashes) {
+//                        String fileName = contentsOnTheNetwork.get(hash).getName().get(0);
+//                        byte [] mydata = stub.downloadFileFromServer(hash);
+//                        System.out.println("downloading file '" + fileName +"' ...");
+//                        File clientpathfile = new File(folder.getAbsolutePath()+ "\\" + fileName);
+//                        FileOutputStream out = new FileOutputStream(clientpathfile);
+//                        out.write(mydata);
+//                        out.flush();
+//                        out.close();
+//                        System.out.println("Completed!");
+//                    }
+
+//                    }
+
+
+                } catch (RemoteException e) {
+                    System.err.println("remote exception: " + e.toString()); e.printStackTrace();
+                } catch (Exception e) {
+                    System.err.println("client exception: " + e.toString()); e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -52,6 +125,8 @@ public class TrueNode {
     }
 
     private static boolean isValidIPAddress(String ip) {
+        if (ip == null)
+            return false;
         // Regex for digit from 0 to 255.
         String zeroTo255
                 = "(\\d{1,2}|(0|1)\\"

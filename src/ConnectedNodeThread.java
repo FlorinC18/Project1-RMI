@@ -3,9 +3,7 @@ import java.io.FileOutputStream;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class ConnectedNodeThread implements Runnable{
 
@@ -26,29 +24,36 @@ public class ConnectedNodeThread implements Runnable{
         try {
             Registry registry = LocateRegistry.getRegistry(hostIP, hostPort);
             ClientNodeImplementation node = new ClientNodeImplementation();
+//            NodeInter stub = (NodeInter) registry.lookup("Node");
             Server stub = (Server) registry.lookup("Node");
             System.out.println("Connected to Node " + hostIP + ": " + hostPort);
+//            NodeImplementation node = new NodeImplementation(folder, id, stub);
             stub.registerNode(node, id);
             System.out.println("Client registered, waiting for notification");
             synchronized (node) {
-                node.wait();
-                Map<String, FileContents> contentsOnTheNetwork = stub.getListOfFiles();
-                for (FileContents file: contentsOnTheNetwork.values()) {
+//                node.wait();
+                Map<String, NewFileContents> contentsOnTheNetwork = new HashMap<>();
+                List<String> nodeIds = new ArrayList<>();
+//                contentsOnTheNetwork = stub.getListOfFiles(contentsOnTheNetwork, nodeIds);
+                if (contentsOnTheNetwork.isEmpty()) {
+                    System.out.println("esta feo q no trobis res imbesil");
+                }
+                for (NewFileContents file: contentsOnTheNetwork.values()) {
                     System.out.println(file.toString());
                 }
 
-                List<String> fileHashes = node.selectFiles(contentsOnTheNetwork);
-                for (String hash: fileHashes) {
-                    String fileName = contentsOnTheNetwork.get(hash).getName();
-                    byte [] mydata = stub.downloadFileFromServer(hash);
-                    System.out.println("downloading file '" + fileName +"' ...");
-                    File clientpathfile = new File(folder.getAbsolutePath()+ "\\" + fileName);
-                    FileOutputStream out=new FileOutputStream(clientpathfile);
-                    out.write(mydata);
-                    out.flush();
-                    out.close();
-                    System.out.println("Completed!");
-                }
+//                List<String> fileHashes = node.selectFiles(contentsOnTheNetwork);
+//                for (String hash: fileHashes) {
+//                    String fileName = contentsOnTheNetwork.get(hash).getName();
+//                    byte [] mydata = stub.downloadFileFromServer(hash);
+//                    System.out.println("downloading file '" + fileName +"' ...");
+//                    File clientpathfile = new File(folder.getAbsolutePath()+ "\\" + fileName);
+//                    FileOutputStream out = new FileOutputStream(clientpathfile);
+//                    out.write(mydata);
+//                    out.flush();
+//                    out.close();
+//                    System.out.println("Completed!");
+//                }
 
             }
 

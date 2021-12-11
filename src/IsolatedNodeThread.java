@@ -23,21 +23,22 @@ public class IsolatedNodeThread implements Runnable{
         try {
             System.setProperty("java.rmi.server.hostname", "192.168.1.131");
             Registry registry = startRegistry(exposedPort);
-            ServerNodeImplementation obj = new ServerNodeImplementation(folder);
+//            ServerNodeImplementation obj = new ServerNodeImplementation(folder);
+            NodeImplementation obj = new NodeImplementation(folder, id, exposedPort);
             registry.rebind("Node", obj);
 
             System.out.println(ANSI_PURPLE + "Server ready. Start registering clients ..." + ANSI_RESET);
-            while (true) {
-                synchronized (obj) {
-                    obj.wait();
-                    obj.notifyCorrectRegistration();
-                    System.out.println(ANSI_PURPLE + "Node " + obj.getLastAddedNodeId() + " has been notified!" + ANSI_RESET);
-                    obj.wait();
-                    System.out.println(ANSI_PURPLE + "Displaying files to client..." + ANSI_RESET);
-                    obj.wait();
-                    System.out.println(ANSI_PURPLE + "Client downloaded file :)" + ANSI_RESET);
-                }
-            }
+//            while (true) {
+//                synchronized (obj) {
+//                    obj.wait();
+//                    obj.notifyCorrectRegistration();
+//                    System.out.println(ANSI_PURPLE + "Node " + obj.getLastAddedNodeId() + " has been notified!" + ANSI_RESET);
+//                    obj.wait();
+//                    System.out.println(ANSI_PURPLE + "Displaying files to client..." + ANSI_RESET);
+//                    obj.wait();
+//                    System.out.println(ANSI_PURPLE + "Client downloaded file :)" + ANSI_RESET);
+//                }
+//            }
         } catch (Exception e) {
             System.err.println("Server exception: " + e.toString()); e.printStackTrace();
         }
