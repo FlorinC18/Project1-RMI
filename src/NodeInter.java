@@ -13,7 +13,14 @@ public interface NodeInter extends Remote {
     String getId() throws RemoteException;
 
 
+
     // CLIENT
     void notifyRegistered(String id) throws RemoteException;
     List<String> selectFiles(Map<String, NewFileContents> fileContentsMap) throws RemoteException;
+    void uploadFile(String path) throws IOException, NoSuchAlgorithmException;
+    void changeFileName(String hash, String name) throws IOException;
+    void changeFileDescription(String hash, String description);
+    void changeFileKeywords(String hash, List<String> keywords);
+    void deleteFile(String hash) throws IOException, NoSuchAlgorithmException;
+    Map<String, NewFileContents> getOwnFiles();
 }

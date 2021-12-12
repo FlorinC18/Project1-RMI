@@ -4,6 +4,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.MessageDigest;
@@ -28,6 +32,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
         this.folder = folder;
         this.id = ownId;
         this.parentNode = parentNode;
+        this.childrenNodes.put(parentNode.getId(), parentNode);
         try(final DatagramSocket socket = new DatagramSocket()){
             socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
             ip = socket.getLocalAddress().getHostAddress();
@@ -76,7 +81,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     public Map<String, NewFileContents> getListOfFiles(Map<String, NewFileContents> currentList, List<String> alreadyAskedNodes) throws IOException, NoSuchAlgorithmException {
 //        synchronized (this) {
             if (alreadyAskedNodes.contains(this.id)) {
-                this.notify();
+//                this.notify();
                 return currentList;
             } else {
                 updateFilesMap();
@@ -87,17 +92,19 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
                         fileContents.addAllNames(sameFileContents.getName());
                         fileContents.addAllDescriptions(sameFileContents.getDescription());
                         fileContents.addAllKeywords(sameFileContents.getKeywords());
-                        fileContents.addAllContainingNode(sameFileContents.getContainingNodes()); // Aixo no vol puto funcionar
+                        fileContents.addAllContainingNode(sameFileContents.getContainingNodes());
                     } else {
                         currentList.put(fileContentsHash, this.filesMap.get(fileContentsHash));
                     }
                 }
                 alreadyAskedNodes.add(this.id);
-                if (this.parentNode != null) {
-                    return this.parentNode.getListOfFiles(currentList, alreadyAskedNodes);
-                } else {
-                    return currentList;
+
+                for (NodeInter node:this.childrenNodes.values()) {
+                    if (!alreadyAskedNodes.contains(node.getId())) {
+                        currentList.putAll(node.getListOfFiles(currentList, alreadyAskedNodes));
+                    }
                 }
+                return currentList;
             }
 //        }
     }
@@ -145,8 +152,6 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
                 NewFileContents fileContents = new NewFileContents(fileEntry, ip, rmiPort);
                 fileContents.setHash(hash);
                 fileContents.setFile(fileEntry);
-                fileContents.addDescription("patata");
-                fileContents.addKeyword("patata");
                 filesMap.put(hash, fileContents);
             }
         }
@@ -277,4 +282,65 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
         }
         return files;
     }
+
+    @Override
+    public void uploadFile(String path) throws IOException, NoSuchAlgorithmException {
+        File file = new File(path);
+        Path destiny = folder.toPath();
+        if (file.exists() &&  file.isFile()) {
+            Path source = file.toPath();
+            Files.copy(source, destiny, StandardCopyOption.REPLACE_EXISTING);
+        } else if (file.exists() && file.isDirectory()) {
+            for (File doc: Objects.requireNonNull(file.listFiles())) {
+                Path source = doc.toPath();
+                Files.copy(source, destiny, StandardCopyOption.REPLACE_EXISTING);
+            }
+        }
+        updateFilesMap();
+    }
+
+    @Override
+    public void changeFileName(String hash, String name) throws IOException {
+        if(filesMap.containsKey(hash)) {
+            NewFileContents fileContents = filesMap.get(hash);
+            fileContents.setName(List.of(name));
+            Path source = Paths.get(fileContents.getFile().getAbsolutePath());
+            Files.move(source, source.resolveSibling(name));
+        }
+    }
+
+    @Override
+    public void changeFileDescription(String hash, String description) {
+        if(filesMap.containsKey(hash)) {
+            NewFileContents fileContents = filesMap.get(hash);
+            fileContents.setDescription(List.of(description));
+        }
+    }
+
+    @Override
+    public void changeFileKeywords(String hash, List<String> keywords) {
+        if (filesMap.containsKey(hash)) {
+            NewFileContents fileContents = filesMap.get(hash);
+            fileContents.setKeywords(keywords);
+        }
+    }
+
+    @Override
+    public void deleteFile(String hash) throws IOException, NoSuchAlgorithmException {
+        if (filesMap.containsKey(hash)) {
+            NewFileContents fileContents = filesMap.get(hash);
+            if(fileContents.getFile().delete()) {
+                updateFilesMap();
+                System.out.println("File deleted successfully!");
+            } else {
+                System.err.println("Error deleting file :(");
+            }
+        }
+    }
+
+    @Override
+    public Map<String, NewFileContents> getOwnFiles() {
+        return this.filesMap;
+    }
+
 }

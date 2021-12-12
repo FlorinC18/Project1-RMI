@@ -9,7 +9,7 @@ public class NewFileContents implements Serializable, Remote {
     private List<String> name = new ArrayList<>();
     private List<String> description = new ArrayList<>();
     private List<String> keywords = new ArrayList<>();
-    private Map<String, Collection<Integer>> containingNodes = new HashMap<>();
+    private Map<String, List<Integer>> containingNodes = new HashMap<>();
 
 
     public NewFileContents(File file, String ip, int rmiPort) {
@@ -82,11 +82,11 @@ public class NewFileContents implements Serializable, Remote {
         keywords.addAll(keyword);
     }
 
-    public Map<String, Collection<Integer>> getContainingNodes() {
+    public Map<String, List<Integer>> getContainingNodes() {
         return containingNodes;
     }
 
-    public void setContainingNodes(Map<String, Collection<Integer>> containingNodes) {
+    public void setContainingNodes(Map<String, List<Integer>> containingNodes) {
         this.containingNodes = containingNodes;
     }
 
@@ -94,16 +94,17 @@ public class NewFileContents implements Serializable, Remote {
         this.containingNodes.put(ip, List.of(port));
     }
 
-    /*
-        AIxo no va ni pa atras
-        Nose com tenint 2 mapes amb <key = string ip, value = collection/list/array de int>
-        combinar els 2 value sota una mateixa key
-     */
-    public void addAllContainingNode(Map<String, Collection<Integer>> containingNodes) {
+
+    public void addAllContainingNode(Map<String, List<Integer>> containingNodes) {
         for (String ip: containingNodes.keySet()) {
             if (this.containingNodes.containsKey(ip)) {
-                Collection<Integer> ports = containingNodes.get(ip);
-                this.containingNodes.get(ip).addAll(ports);
+                List<Integer> result = new ArrayList<>();
+                List<Integer> portsList1 = this.containingNodes.get(ip);
+                List<Integer> portsList2 = containingNodes.get(ip);
+                result.addAll(portsList1);
+                result.addAll(portsList2);
+                this.containingNodes.put(ip, result);
+
             } else {
                 this.containingNodes.put(ip , (List<Integer>) containingNodes.get(ip));
             }
@@ -117,12 +118,16 @@ public class NewFileContents implements Serializable, Remote {
                     return getHash();
                 break;
             case "name": // name
-                if (getName().contains(attributeValue))
-                    return getHash();
+                for (String name : getName()) {
+                    if (name.contains(attributeValue))
+                        return getHash();
+                }
                 break;
             case "description": // description
-                if (getDescription().contains(attributeValue))
-                    return getHash();
+                for (String desc : getDescription()) {
+                    if (desc.contains(attributeValue))
+                        return getHash();
+                }
                 break;
             case "keywords": // keywords
                 for (String kw : getKeywords()) {
@@ -140,6 +145,6 @@ public class NewFileContents implements Serializable, Remote {
                 ", name='" + name.toString() + '\'' +
                 ", description='" + description.toString() + '\'' +
                 ", keywords=" + keywords.toString() + '\'' +
-                ", containingNodesAdresses=" + containingNodes.toString();
+                ", containingNodesAdresses='" + containingNodes.toString() + '\'';
     }
 }

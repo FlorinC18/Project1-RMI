@@ -1,3 +1,4 @@
+import javax.swing.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -69,34 +70,45 @@ public class TrueNode {
                     }
                     stub.registerNode(node, id);
                     System.out.println("Client registered, waiting for notification");
+                    Thread.sleep(5000);
 //                    synchronized (node) {
 //                        node.wait();
-                    Map<String, NewFileContents> contentsOnTheNetwork = new HashMap<>();
-                    List<String> nodeIds = new ArrayList<>();
-                    contentsOnTheNetwork = stub.getListOfFiles(contentsOnTheNetwork, nodeIds);
-                    if (contentsOnTheNetwork.isEmpty()) {
-                        System.out.println("esta feo q no trobis res imbesil");
-                    }
-                    for (NewFileContents file: contentsOnTheNetwork.values()) {
-                        System.out.println(file.toString());
-                    }
+                    /*
+                        main ui
+                     */
+                    int option = 0;
+                    System.out.println("\n" +
+                            "---------------------------------------\n" +
+                            "|                                     |\n" +
+                            "|         WECOLME TO P2P POCHO        |\n" +
+                            "|                                     |\n" +
+                            "---------------------------------------\n");
+                    do {
 
-//                    List<String> fileHashes = node.selectFiles(contentsOnTheNetwork);
-//                    for (String hash: fileHashes) {
-//                        String fileName = contentsOnTheNetwork.get(hash).getName().get(0);
-//                        byte [] mydata = stub.downloadFileFromServer(hash);
-//                        System.out.println("downloading file '" + fileName +"' ...");
-//                        File clientpathfile = new File(folder.getAbsolutePath()+ "\\" + fileName);
-//                        FileOutputStream out = new FileOutputStream(clientpathfile);
-//                        out.write(mydata);
-//                        out.flush();
-//                        out.close();
-//                        System.out.println("Completed!");
+                        System.out.println("WHAT DO YOU WANT TO DO?");
+                        System.out.println("1 - UPLOAD FILES\n" +
+                                "2 - SEARCH & DOWNLOAD FILES\n" +
+                                "3 - EDIT YOUR FILES\n" +
+                                "4 - DELETE YOUR FILES\n" +
+                                "5 - EXIT\n");
 //                    }
-
-//                    }
-
-
+                        Scanner input = new Scanner(System.in);
+                        option = input.nextInt();
+                        input.close();
+                        switch (option){
+                            case 1:
+                                break;
+                            case 2:
+                                break;
+                            case 3:
+                                break;
+                            case 4:
+                                break;
+                            default:
+                                System.err.println("Select a valid option");
+                        }
+                    } while (option != 5);
+                    System.out.println("See you soon!");
                 } catch (RemoteException e) {
                     System.err.println("remote exception: " + e.toString()); e.printStackTrace();
                 } catch (Exception e) {
@@ -105,6 +117,152 @@ public class TrueNode {
             }
         }
     }
+
+    private void uploadFiles(NodeInter node) throws IOException, NoSuchAlgorithmException {
+        System.out.println("Please insert the path to the desired file or folder to upload");
+        Scanner input = new Scanner(System.in);
+        String path = input.nextLine();
+        node.uploadFile(path);
+    }
+
+
+    private void searchAndDownload(NodeInter node){
+
+    }
+
+
+    private void editYourFiles(NodeInter node) throws IOException {
+        System.out.println("Please select the file you want to edit:");
+        Map<String, NewFileContents> ownFiles = node.getOwnFiles();
+        Map<String, String> namingMap = new HashMap<>();
+        for (String key: ownFiles.keySet()) {
+            String name = ownFiles.get(key).getName().get(0);
+            List<String> desc = ownFiles.get(key).getDescription();
+            List<String> kw = ownFiles.get(key).getKeywords();
+            namingMap.put(name, ownFiles.get(key).getHash());
+            System.out.println(
+                    "\n---------------------------------------\n" +
+                    "Name: " + name + "\n" +
+                    "Description: " + desc.toString() +"\n" +
+                    "Keywords: " + kw.toString() +"\n" +
+                    "---------------------------------------\n"
+            );
+        }
+        Scanner input = new Scanner(System.in);
+        String name = input.nextLine();
+        while (!namingMap.containsKey(name)) {
+            System.err.println("THIS FILE DOESN'T EXIST, TRY AGAIN");
+            name = input.nextLine();
+        }
+        String hash = namingMap.get(name);
+        System.out.println("What do you want to edit?\n" +
+                "1 - Name\n" +
+                "2 - Description\n" +
+                "3 - Keywords\n");
+        int option = input.nextInt();
+        switch(option){
+            case 1:
+                System.out.println("Insert the new name:");
+                String newName = input.nextLine();
+                node.changeFileName(hash, newName);
+                break;
+            case 2:
+                System.out.println("Insert the new description:");
+                String newDesc = input.nextLine();
+                node.changeFileDescription(hash, newDesc);
+                break;
+            case 3:
+                System.out.println("Insert the new keywords separated with commas:");
+                String line = input.nextLine();
+                StringTokenizer st = new StringTokenizer(line, ",");
+                List<String> keywords = new ArrayList<>();
+                while (st.hasMoreTokens()) {
+                    keywords.add(st.nextToken().trim());
+                }
+                node.changeFileKeywords(hash, keywords);
+                break;
+        }
+    }
+
+    private void deleteYourFiles(NodeInter node) throws IOException, NoSuchAlgorithmException{
+        System.out.println("Please select the file you want to edit:");
+        Map<String, String> namingMap = showLocalFiles(node);
+        Scanner input = new Scanner(System.in);
+        node.deleteFile(getFileHash(input, namingMap));
+
+    }
+
+    private Map<String, String> showLocalFiles(NodeInter node){
+        Map<String, NewFileContents> ownFiles = node.getOwnFiles();
+        Map<String, String> namingMap = new HashMap<>();
+        for (String key: ownFiles.keySet()) {
+            String name = ownFiles.get(key).getName().get(0);
+            List<String> desc = ownFiles.get(key).getDescription();
+            List<String> kw = ownFiles.get(key).getKeywords();
+            namingMap.put(name, ownFiles.get(key).getHash());
+            System.out.println(
+                    "\n---------------------------------------\n" +
+                    "Name: " + name + "\n" +
+                    "Description: " + desc.toString() +"\n" +
+                    "Keywords: " + kw.toString() +"\n" +
+                    "---------------------------------------\n"
+            );
+        }
+        return namingMap;
+    }
+
+    private String getFileHash(Scanner input, Map<String, String> namingMap){
+        String name = input.nextLine();
+        while (!namingMap.containsKey(name)) {
+            System.err.println("THIS FILE DOESN'T EXIST, TRY AGAIN");
+            name = input.nextLine();
+        }
+        return namingMap.get(name);
+    }
+
+//    Map<String, NewFileContents> contentsOnTheNetwork = new HashMap<>();
+//    List<String> nodeIds = new ArrayList<>();
+//    contentsOnTheNetwork = stub.getListOfFiles(contentsOnTheNetwork, nodeIds);
+//                    if (contentsOnTheNetwork.isEmpty()) {
+//        System.out.println("esta feo q no trobis res imbesil");
+//    }
+//                    for (NewFileContents file: contentsOnTheNetwork.values()) {
+//        System.out.println(file.toString());
+//    }
+//
+//    List<String> fileHashes = node.selectFiles(contentsOnTheNetwork);
+//                    for (String hash: fileHashes) {
+//        String fileName = contentsOnTheNetwork.get(hash).getName().get(0);
+//        Map<String, List<Integer>> containingNodes = contentsOnTheNetwork.get(hash).getContainingNodes();
+//                        /*
+//                            1 - mostrar ip i ports
+//                            2 - usuari selecciona ip i port
+//                            3 - conectarse a host
+//                         */
+//
+//
+//        String newHostIP = (String) containingNodes.keySet().toArray()[0];
+//        int newHostPort = containingNodes.get(hostIP).get(0);
+//
+//
+//        if (!hostIP.equals(newHostIP) || hostPort != newHostPort) {
+//            hostIP = newHostIP;
+//            hostPort = newHostPort;
+//            registry = LocateRegistry.getRegistry(hostIP, hostPort);
+//            stub = (NodeInter) registry.lookup("Node");
+//            stub.registerNode(node, id);
+////                            System.out.println("Client registered, waiting for notification");
+//        }
+//
+//        byte [] mydata = stub.downloadFileFromServer(hash);
+//        System.out.println("downloading file '" + fileName +"' ...");
+//        File clientpathfile = new File(folder.getAbsolutePath()+ "\\" + fileName);
+//        FileOutputStream out = new FileOutputStream(clientpathfile);
+//        out.write(mydata);
+//        out.flush();
+//        out.close();
+//        System.out.println("Completed!");
+//    }
 
     private static Registry startRegistry(Integer port) throws RemoteException {
         try {
