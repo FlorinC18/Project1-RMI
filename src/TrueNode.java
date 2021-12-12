@@ -184,8 +184,8 @@ public class TrueNode {
     private static void deleteYourFiles(NodeInter node) throws IOException, NoSuchAlgorithmException{
         System.out.println("Please select the file you want to edit:");
         Map<String, String> namingMap = showLocalFiles(node);
-        Scanner input = new Scanner(System.in);
-        node.deleteFile(getFileHash(input, namingMap));
+
+        node.deleteFile(getFileHash(namingMap));
 
     }
 
@@ -217,7 +217,8 @@ public class TrueNode {
 
         while (!namingMap.containsKey(name)) {
             System.err.println("THIS FILE DOESN'T EXIST, TRY AGAIN");
-            name = input.nextLine();
+            //name = input2.nextLine();
+            name = br.readLine();
         }
         //input2.close();
 
