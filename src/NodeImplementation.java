@@ -284,7 +284,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     }
 
     @Override
-    public void uploadFile(String path) throws IOException, NoSuchAlgorithmException {
+    public void uploadFile(String path) throws IOException, NoSuchAlgorithmException, RemoteException {
         File file = new File(path);
         Path destiny = folder.toPath();
         if (file.exists() &&  file.isFile()) {
@@ -300,7 +300,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     }
 
     @Override
-    public void changeFileName(String hash, String name) throws IOException {
+    public void changeFileName(String hash, String name) throws IOException, RemoteException {
         if(filesMap.containsKey(hash)) {
             NewFileContents fileContents = filesMap.get(hash);
             fileContents.setName(List.of(name));
@@ -310,7 +310,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     }
 
     @Override
-    public void changeFileDescription(String hash, String description) {
+    public void changeFileDescription(String hash, String description)  throws RemoteException{
         if(filesMap.containsKey(hash)) {
             NewFileContents fileContents = filesMap.get(hash);
             fileContents.setDescription(List.of(description));
@@ -318,7 +318,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     }
 
     @Override
-    public void changeFileKeywords(String hash, List<String> keywords) {
+    public void changeFileKeywords(String hash, List<String> keywords)  throws RemoteException{
         if (filesMap.containsKey(hash)) {
             NewFileContents fileContents = filesMap.get(hash);
             fileContents.setKeywords(keywords);
@@ -326,7 +326,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     }
 
     @Override
-    public void deleteFile(String hash) throws IOException, NoSuchAlgorithmException {
+    public void deleteFile(String hash) throws IOException, NoSuchAlgorithmException, RemoteException {
         if (filesMap.containsKey(hash)) {
             NewFileContents fileContents = filesMap.get(hash);
             if(fileContents.getFile().delete()) {
@@ -339,7 +339,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     }
 
     @Override
-    public Map<String, NewFileContents> getOwnFiles() {
+    public Map<String, NewFileContents> getOwnFiles() throws RemoteException {
         return this.filesMap;
     }
 

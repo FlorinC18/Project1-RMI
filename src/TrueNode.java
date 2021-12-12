@@ -1,7 +1,5 @@
 import javax.swing.*;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -27,6 +25,7 @@ public class TrueNode {
     private static int hostPort;
     private static String id;
     private static String mode;
+    private static BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
 
     public static void main(String args[]) throws IOException, NoSuchAlgorithmException {
@@ -92,20 +91,14 @@ public class TrueNode {
                                 "4 - DELETE YOUR FILES\n" +
                                 "5 - EXIT\n");
 //                    }
-                        Scanner input = new Scanner(System.in);
-                        option = input.nextInt();
-                        input.close();
-                        switch (option){
-                            case 1:
-                                break;
-                            case 2:
-                                break;
-                            case 3:
-                                break;
-                            case 4:
-                                break;
-                            default:
-                                System.err.println("Select a valid option");
+                        option = Integer.parseInt(br.readLine());
+//                        input.close();
+                        switch (option) {
+                            case 1 -> uploadFiles(node);
+                            case 2 -> searchAndDownload(node);
+                            case 3 -> editYourFiles(node);
+                            case 4 -> deleteYourFiles(node);
+                            default -> System.err.println("Select a valid option");
                         }
                     } while (option != 5);
                     System.out.println("See you soon!");
@@ -118,22 +111,24 @@ public class TrueNode {
         }
     }
 
-    private void uploadFiles(NodeInter node) throws IOException, NoSuchAlgorithmException {
+    private static void uploadFiles(NodeInter node) throws IOException, NoSuchAlgorithmException {
         System.out.println("Please insert the path to the desired file or folder to upload");
-        Scanner input = new Scanner(System.in);
-        String path = input.nextLine();
+        String path = br.readLine();
+//        input.close();
         node.uploadFile(path);
     }
 
 
-    private void searchAndDownload(NodeInter node){
+    private static void searchAndDownload(NodeInter node){
 
     }
 
 
-    private void editYourFiles(NodeInter node) throws IOException {
+    private static void editYourFiles(NodeInter node) throws IOException {
         System.out.println("Please select the file you want to edit:");
-        Map<String, NewFileContents> ownFiles = node.getOwnFiles();
+//        Map<String, NewFileContents> ownFiles = node.getOwnFiles();
+        Map<String, String> namingMap = showLocalFiles(node);
+        /*
         Map<String, String> namingMap = new HashMap<>();
         for (String key: ownFiles.keySet()) {
             String name = ownFiles.get(key).getName().get(0);
@@ -148,43 +143,45 @@ public class TrueNode {
                     "---------------------------------------\n"
             );
         }
-        Scanner input = new Scanner(System.in);
-        String name = input.nextLine();
-        while (!namingMap.containsKey(name)) {
-            System.err.println("THIS FILE DOESN'T EXIST, TRY AGAIN");
-            name = input.nextLine();
-        }
-        String hash = namingMap.get(name);
+        */
+//        String name = input.nextLine();
+//        while (!namingMap.containsKey(name)) {
+//            System.err.println("THIS FILE DOESN'T EXIST, TRY AGAIN");
+//            name = input.nextLine();
+//        }
+//        String hash = namingMap.get(name);
+        String hash = getFileHash(namingMap);
         System.out.println("What do you want to edit?\n" +
                 "1 - Name\n" +
                 "2 - Description\n" +
                 "3 - Keywords\n");
-        int option = input.nextInt();
-        switch(option){
-            case 1:
+        String line = br.readLine();
+        int option = Integer.parseInt(line);
+        switch (option) {
+            case 1 -> {
                 System.out.println("Insert the new name:");
-                String newName = input.nextLine();
+                String newName = br.readLine();
                 node.changeFileName(hash, newName);
-                break;
-            case 2:
+            }
+            case 2 -> {
                 System.out.println("Insert the new description:");
-                String newDesc = input.nextLine();
+                String newDesc = br.readLine();
                 node.changeFileDescription(hash, newDesc);
-                break;
-            case 3:
+            }
+            case 3 -> {
                 System.out.println("Insert the new keywords separated with commas:");
-                String line = input.nextLine();
+                line = br.readLine();
                 StringTokenizer st = new StringTokenizer(line, ",");
                 List<String> keywords = new ArrayList<>();
                 while (st.hasMoreTokens()) {
                     keywords.add(st.nextToken().trim());
                 }
                 node.changeFileKeywords(hash, keywords);
-                break;
+            }
         }
     }
 
-    private void deleteYourFiles(NodeInter node) throws IOException, NoSuchAlgorithmException{
+    private static void deleteYourFiles(NodeInter node) throws IOException, NoSuchAlgorithmException{
         System.out.println("Please select the file you want to edit:");
         Map<String, String> namingMap = showLocalFiles(node);
         Scanner input = new Scanner(System.in);
@@ -192,7 +189,7 @@ public class TrueNode {
 
     }
 
-    private Map<String, String> showLocalFiles(NodeInter node){
+    private static Map<String, String> showLocalFiles(NodeInter node) throws RemoteException {
         Map<String, NewFileContents> ownFiles = node.getOwnFiles();
         Map<String, String> namingMap = new HashMap<>();
         for (String key: ownFiles.keySet()) {
@@ -211,12 +208,19 @@ public class TrueNode {
         return namingMap;
     }
 
-    private String getFileHash(Scanner input, Map<String, String> namingMap){
-        String name = input.nextLine();
+    private static String getFileHash(Map<String, String> namingMap) throws IOException {
+        //Scanner input2 = new Scanner(System.in);
+        //String name = input2.nextLine();
+
+
+        String name = br.readLine();
+
         while (!namingMap.containsKey(name)) {
             System.err.println("THIS FILE DOESN'T EXIST, TRY AGAIN");
             name = input.nextLine();
         }
+        //input2.close();
+
         return namingMap.get(name);
     }
 
@@ -263,24 +267,6 @@ public class TrueNode {
 //        out.close();
 //        System.out.println("Completed!");
 //    }
-
-    private static Registry startRegistry(Integer port) throws RemoteException {
-        try {
-            Registry registry = LocateRegistry.getRegistry(port);
-            registry.list( );
-            // The above call will throw an exception
-            // if the registry does not already exist
-            return registry;
-        }
-
-        catch (RemoteException ex) {
-            // No valid registry at that port.
-            System.out.println("RMI registry cannot be located " );
-            Registry registry= LocateRegistry.createRegistry(port);
-            System.out.println("RMI registry created at port " + port);
-            return registry;
-        }
-    }
 
     private static boolean isValidIPAddress(String ip) {
         if (ip == null)
