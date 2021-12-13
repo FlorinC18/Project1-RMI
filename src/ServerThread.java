@@ -18,7 +18,7 @@ public class ServerThread implements Runnable{
     @Override
     public void run() {
         try {
-//            System.setProperty("java.rmi.server.hostname", "192.168.1.131");
+            System.setProperty("java.rmi.server.hostname", "192.168.1.131");
             Registry registry = startRegistry(exposedPort);
             registry.rebind("Node", node);
             while (true){
