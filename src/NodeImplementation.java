@@ -289,6 +289,8 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
         Path destiny = folder.toPath().resolve(file.getName());
         if (file.exists() &&  file.isFile()) {
             Path source = file.toPath();
+            System.out.println("Sourece: "+source);
+            System.out.println("Destiny: "+destiny);
             Files.copy(source, destiny, StandardCopyOption.REPLACE_EXISTING);
         } else if (file.exists() && file.isDirectory()) {
             for (File doc: Objects.requireNonNull(file.listFiles())) {
