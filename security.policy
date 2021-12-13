@@ -4,4 +4,6 @@ grant {
     permission java.net.SocketPermission ":1024-65535", "connect,accept,resolve";
     // permits socket access to port 80, the default HTTP port
     permission java.net.SocketPermission ":80", "connect";
+    // permits acces node files
+    permission java.security.AllPermission;
 };
