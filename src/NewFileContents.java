@@ -141,10 +141,12 @@ public class NewFileContents implements Serializable, Remote {
 
     @Override
     public String toString() {
-        return " hash='" + hash + '\'' +
-                ", name='" + name.toString() + '\'' +
-                ", description='" + description.toString() + '\'' +
-                ", keywords=" + keywords.toString() + '\'' +
-                ", containingNodesAdresses='" + containingNodes.toString() + '\'';
+        return "\n------------------------------------------------------------------------------\n" +
+                "Hash: " + hash + "\n" +
+                "Name: " + name + "\n" +
+                "Description: " + description.toString() +"\n" +
+                "Keywords: " + keywords.toString() +"\n" +
+                "Owner Node IPs and ports: " + containingNodes.toString() +"\n" +
+                "------------------------------------------------------------------------------\n";
     }
 }

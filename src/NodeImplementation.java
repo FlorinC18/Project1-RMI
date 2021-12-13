@@ -286,7 +286,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     @Override
     public void uploadFile(String path) throws IOException, NoSuchAlgorithmException, RemoteException {
         File file = new File(path);
-        Path destiny = folder.toPath();
+        Path destiny = folder.toPath().resolve(file.getName());
         if (file.exists() &&  file.isFile()) {
             Path source = file.toPath();
             Files.copy(source, destiny, StandardCopyOption.REPLACE_EXISTING);
