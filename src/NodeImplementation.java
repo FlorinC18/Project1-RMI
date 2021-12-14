@@ -1,7 +1,4 @@
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.file.Files;
@@ -121,22 +118,20 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
             try {
                 in.read(mydata, 0, mydata.length);
             } catch (IOException e) {
-
                 e.printStackTrace();
             }
             try {
                 in.close();
             } catch (IOException e) {
-
                 e.printStackTrace();
             }
-
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
 
         return mydata;
     }
+
 
     private void updateFilesMap() throws IOException, NoSuchAlgorithmException {
         ArrayList<String> currentFiles = new ArrayList<>();
@@ -225,7 +220,11 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
         return lastAddedNodeId;
     }
 
-// CLIENT methods
+    public void setParentNode(NodeInter parentNode) {
+        this.parentNode = parentNode;
+    }
+
+    // CLIENT methods
 
     @Override
     public void notifyRegistered(String id) throws RemoteException {
@@ -236,19 +235,17 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     }
 
     @Override
-    public List<String> selectFiles(Map<String, NewFileContents> fileContentsMap) throws RemoteException {
-        Scanner scanner = new Scanner(System.in);
-
+    public List<String> selectFiles(Map<String, NewFileContents> fileContentsMap, BufferedReader br) throws IOException {
         System.out.println("Enter attribute to search by:");
         System.out.println("1 - Hash code of the desired file");
         System.out.println("2 - Name");
         System.out.println("3 - Description");
         System.out.println("4 - Keywords");
 
-        int attribute = scanner.nextInt();
+        int attribute = Integer.parseInt(br.readLine());
         while (attribute < 0 || attribute > 4) {
             System.out.println("Please select a valid number\n");
-            attribute = scanner.nextInt();
+            attribute = Integer.parseInt(br.readLine());
         }
 
         String attributeName = switch (attribute) {
@@ -260,8 +257,8 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
         };
 
         System.out.println("Enter string to search in '" + attributeName + "' \n");
-        String line = scanner.next();
-        scanner.close();
+        String line = br.readLine();
+
         return selectByAttribute(fileContentsMap, attributeName, line);
     }
 
@@ -284,7 +281,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     }
 
     @Override
-    public void uploadFile(String path) throws IOException, NoSuchAlgorithmException, RemoteException {
+    public void uploadFile(String path) throws IOException, NoSuchAlgorithmException {
         File file = new File(path);
         Path destiny = folder.toPath().resolve(file.getName());
         if (file.exists() &&  file.isFile()) {
@@ -302,7 +299,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     }
 
     @Override
-    public void changeFileName(String hash, String name) throws IOException, RemoteException {
+    public void changeFileName(String hash, String name) throws IOException {
         if(filesMap.containsKey(hash)) {
             NewFileContents fileContents = filesMap.get(hash);
             fileContents.setName(List.of(name));
@@ -328,7 +325,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     }
 
     @Override
-    public void deleteFile(String hash) throws IOException, NoSuchAlgorithmException, RemoteException {
+    public void deleteFile(String hash) throws IOException, NoSuchAlgorithmException {
         if (filesMap.containsKey(hash)) {
             NewFileContents fileContents = filesMap.get(hash);
             if(fileContents.getFile().delete()) {

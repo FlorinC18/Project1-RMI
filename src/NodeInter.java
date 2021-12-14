@@ -1,3 +1,4 @@
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -16,11 +17,11 @@ public interface NodeInter extends Remote {
 
     // CLIENT
     void notifyRegistered(String id) throws RemoteException;
-    List<String> selectFiles(Map<String, NewFileContents> fileContentsMap) throws RemoteException;
-    void uploadFile(String path) throws IOException, NoSuchAlgorithmException, RemoteException;
-    void changeFileName(String hash, String name) throws IOException, RemoteException;
+    List<String> selectFiles(Map<String, NewFileContents> fileContentsMap, BufferedReader br) throws IOException;
+    void uploadFile(String path) throws IOException, NoSuchAlgorithmException;
+    void changeFileName(String hash, String name) throws IOException;
     void changeFileDescription(String hash, String description) throws RemoteException;
     void changeFileKeywords(String hash, List<String> keywords) throws RemoteException;
-    void deleteFile(String hash) throws IOException, NoSuchAlgorithmException, RemoteException;
+    void deleteFile(String hash) throws IOException, NoSuchAlgorithmException;
     Map<String, NewFileContents> getOwnFiles() throws RemoteException;
 }

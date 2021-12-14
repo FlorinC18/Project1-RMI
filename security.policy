@@ -1,9 +1,0 @@
-grant {
-    // permits socket access to all commonTCP ports, including the default
-    // RMI registry port (1099) – need for both the client and the server.
-    permission java.net.SocketPermission ":1024-65535", "connect,accept,resolve";
-    // permits socket access to port 80, the default HTTP port
-    permission java.net.SocketPermission ":80", "connect";
-    // permits acces node files
-    permission java.security.AllPermission;
-};

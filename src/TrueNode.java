@@ -1,6 +1,4 @@
-import javax.swing.*;
 import java.io.*;
-import java.rmi.RMISecurityManager;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -28,9 +26,10 @@ public class TrueNode {
     private static String mode;
     private static InputStreamReader ir = new InputStreamReader(System.in);
     private static BufferedReader br = new BufferedReader(ir);
+    private static NodeImplementation node;
 
 
-    public static void main(String args[]) throws IOException, NoSuchAlgorithmException {
+    public static void main(String[] args) {
         id = UUID.randomUUID().toString();
         if (args.length == 4) {
             exposedPort = Integer.parseInt(args[0]);
@@ -49,42 +48,29 @@ public class TrueNode {
             System.err.println("port-to-expose path-to-folder host-ip host-port");
             System.exit(0);
         }
-        System.setSecurityManager(new RMISecurityManager());
-        if (folder.exists() && folder.isDirectory()) {
-            // isolated
-            if (mode.equals("isolated")) {
-                try {
-                    NodeImplementation node = new NodeImplementation(folder, id, exposedPort);
-                    ServerThread serverThread = new ServerThread(exposedPort, node);
-                    new Thread(serverThread).start();
-                    System.out.println("Waiting for registry to start...");
-                    Thread.sleep(5000);
-                    showMenuActions(node, null, null);
-                } catch (RemoteException e) {
-                    System.err.println("remote exception: " + e.toString()); e.printStackTrace();
-                } catch (Exception e) {
-                    System.err.println("client exception: " + e.toString()); e.printStackTrace();
-                }
-            }
 
-            // connected
-            if (isValidIPAddress(hostIP) && hostPort != 0){
+        if (folder.exists() && folder.isDirectory()) {
+
                 try {
-                    Registry registry = LocateRegistry.getRegistry(hostIP, hostPort);
-                    NodeInter stub = (NodeInter) registry.lookup("Node");
-                    System.out.println("Connected to Node " + hostIP + ": " + hostPort);
-                    NodeImplementation node = new NodeImplementation(folder, id, stub, exposedPort);
-                    if (mode.equals("connected")) {
-                        ServerThread serverThread = new ServerThread(exposedPort, node);
-                        new Thread(serverThread).start();
+                    node = new NodeImplementation(folder, id, exposedPort);
+                    Registry ownRegistry = startRegistry(exposedPort);
+                    ownRegistry.rebind("Node", node);
+                    Registry otherRegistry = null;
+                    NodeInter stub = null;
+                    if (isValidIPAddress(hostIP) && hostPort != 0) {
+                        otherRegistry = LocateRegistry.getRegistry(hostIP, hostPort);
+                        stub = (NodeInter) otherRegistry.lookup("Node");
+                        node.setParentNode(stub);
+                        stub.registerNode(node, id);
+                        System.out.println("Connected to Node " + hostIP + ": " + hostPort);
                     }
-                    stub.registerNode(node, id);
+
                     System.out.println("Client registered, waiting for notification");
                     System.out.println("Waiting for registry to start...");
                     Thread.sleep(5000);
 //                    synchronized (node) {
 //                        node.wait();
-                    showMenuActions(node, registry, stub);
+                    showMenuActions(node, otherRegistry, stub);
 
 //                    }
                 } catch (RemoteException e) {
@@ -92,7 +78,7 @@ public class TrueNode {
                 } catch (Exception e) {
                     System.err.println("client exception: " + e.toString()); e.printStackTrace();
                 }
-            }
+//            }
         }
     }
 
@@ -154,24 +140,13 @@ public class TrueNode {
             }
 
 
-            List<String> fileHashes = node.selectFiles(contentsOnTheNetwork);
+            List<String> fileHashes = node.selectFiles(contentsOnTheNetwork, br);
             for (String hash: fileHashes) {
                 String fileName = contentsOnTheNetwork.get(hash).getName().get(0);
                 Map<String, List<Integer>> containingNodes = contentsOnTheNetwork.get(hash).getContainingNodes();
-                                /*
-                                    1 - mostrar ip i ports
-                                    2 - usuari selecciona ip i port
-                                    3 - conectarse a host
-                                 */
-
 
                 String newHostIP = (String) containingNodes.keySet().toArray()[0];
-//                System.out.println(hostIP);
-//                System.out.println(containingNodes.containsKey(hostIP));
-//                System.out.println(containingNodes.get(hostIP));
-//                System.out.println(containingNodes.get(hostIP).get(0));
                 int newHostPort = containingNodes.get(newHostIP).get(0);
-
 
                 if (hostIP == null || !hostIP.equals(newHostIP) || hostPort != newHostPort) {
                     hostIP = newHostIP;
@@ -188,7 +163,7 @@ public class TrueNode {
 
                 byte [] mydata = stub.downloadFileFromServer(hash);
                 System.out.println("downloading file '" + fileName +"' ...");
-                File clientpathfile = new File(folder.getAbsolutePath()+ "\\" + fileName);
+                File clientpathfile = new File(folder.getAbsolutePath()+ "\\" + fileName); // UBUNTU: canviar "\\" per "/"
                 FileOutputStream out = new FileOutputStream(clientpathfile);
                 out.write(mydata);
                 out.flush();
@@ -197,10 +172,8 @@ public class TrueNode {
             }
 
         }
-        /*
         System.out.println("Your files are now:");
         showLocalFiles(node);
-         */
     }
 
 
@@ -247,7 +220,6 @@ public class TrueNode {
         node.deleteFile(getFileHash(namingMap));
         System.out.println("Your files are now:");
         showLocalFiles(node);
-
     }
 
     private static Map<String, String> showLocalFiles(NodeInter node) throws RemoteException {
@@ -270,18 +242,12 @@ public class TrueNode {
     }
 
     private static String getFileHash(Map<String, String> namingMap) throws IOException {
-        //Scanner input2 = new Scanner(System.in);
-        //String name = input2.nextLine();
-
-
         String name = br.readLine();
 
         while (!namingMap.containsKey(name)) {
             System.err.println("THIS FILE DOESN'T EXIST, TRY AGAIN");
-            //name = input2.nextLine();
             name = br.readLine();
         }
-        //input2.close();
 
         return namingMap.get(name);
     }
@@ -322,5 +288,23 @@ public class TrueNode {
         // Return if the IP address
         // matched the ReGex
         return m.matches();
+    }
+
+    private static Registry startRegistry(Integer port) throws RemoteException {
+        try {
+            Registry registry = LocateRegistry.getRegistry(port);
+            registry.list( );
+            // The above call will throw an exception
+            // if the registry does not already exist
+            return registry;
+        }
+
+        catch (RemoteException ex) {
+            // No valid registry at that port.
+            System.out.println("RMI registry cannot be located " );
+            Registry registry= LocateRegistry.createRegistry(port);
+            System.out.println("RMI registry created at port " + port);
+            return registry;
+        }
     }
 }
