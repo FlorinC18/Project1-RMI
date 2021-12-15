@@ -92,11 +92,11 @@ public class TrueNode {
             System.out.println("\n" +
                     "---------------------------------------\n" +
                     "|                                     |\n" +
-                    "|         WECOLME TO P2P POCHO        |\n" +
+                    "|        WECOLME TO P2PNetwork        |\n" +
                     "|                                     |\n" +
                     "---------------------------------------\n");
             while (true) {
-                br = new BufferedReader(ir);
+
                 System.out.println("WHAT DO YOU WANT TO DO?");
                 System.out.println("1 - UPLOAD FILES\n" +
                         "2 - SEARCH & DOWNLOAD FILES\n" +

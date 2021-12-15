@@ -129,7 +129,7 @@ public class NewFileContents implements Serializable, Remote {
                 "Name: " + name + "\n" +
                 "Description: " + description.toString() +"\n" +
                 "Keywords: " + keywords.toString() +"\n" +
-                "Owner Node IPs and ports: " + containingNodes.toString() +"\n" +
+                //"Owner Node IPs and ports: " + containingNodes.toString() +"\n" +
                 "------------------------------------------------------------------------------\n";
     }
 }
