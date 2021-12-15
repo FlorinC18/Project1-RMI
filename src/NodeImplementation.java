@@ -11,37 +11,22 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
-/**
- * AJUNTAR ELS IMPLEMENTATIONS VELLS EN AQUESTA CLASSE I FER LA RECURSIVITAT
- */
+
 public class NodeImplementation extends UnicastRemoteObject implements NodeInter {
     private String id;
     private File folder;
-    private NodeInter parentNode = null;
-    private Map<String, NodeInter> childrenNodes = new HashMap<>();
+//    private NodeInter parentNode = null;
+    private Map<String, NodeInter> knownNodes = new HashMap<>();
     private Map<String, NewFileContents> filesMap = new HashMap<>();
     private String lastAddedNodeId;
     private String ip;
     private int rmiPort;
 
-
-    protected NodeImplementation(File folder, String ownId, NodeInter parentNode, int rmiPort) throws IOException, NoSuchAlgorithmException {
-        this.folder = folder;
-        this.id = ownId;
-        this.parentNode = parentNode;
-        this.childrenNodes.put(parentNode.getId(), parentNode);
-        try(final DatagramSocket socket = new DatagramSocket()){
-            socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
-            ip = socket.getLocalAddress().getHostAddress();
-        }
-        this.rmiPort = rmiPort;
-        updateFilesMap();
-    }
-
+    // isolated
     protected NodeImplementation(File folder, String ownId, int rmiPort) throws IOException, NoSuchAlgorithmException {
         this.folder = folder;
         this.id = ownId;
-        this.parentNode = null;
+//        this.parentNode = null;
         try(final DatagramSocket socket = new DatagramSocket()){
             socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
             ip = socket.getLocalAddress().getHostAddress();
@@ -55,30 +40,14 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
 
     @Override
     public void registerNode(NodeInter node, String id) throws RemoteException {
-        synchronized (this) {
-            System.out.println("Registering node " + id + " ...");
-            childrenNodes.put(id, node);
-            lastAddedNodeId = id;
-            this.notify();
-        }
-    }
-    public void notifyCorrectRegistration() throws RemoteException {
-        try {
-            System.out.println("Calling client " + lastAddedNodeId + " ...");
-            childrenNodes.get(lastAddedNodeId).notifyRegistered(lastAddedNodeId);
-
-
-        } catch (RemoteException e) {
-            System.err.println("error in notifying correct registration: " + e.toString()); e.printStackTrace();
-            System.err.println();
-        }
+        System.out.println("Registering node " + id + " ...");
+        knownNodes.put(id, node);
+        lastAddedNodeId = id;
     }
 
     @Override
     public Map<String, NewFileContents> getListOfFiles(Map<String, NewFileContents> currentList, List<String> alreadyAskedNodes) throws IOException, NoSuchAlgorithmException {
-//        synchronized (this) {
             if (alreadyAskedNodes.contains(this.id)) {
-//                this.notify();
                 return currentList;
             } else {
                 updateFilesMap();
@@ -96,26 +65,27 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
                 }
                 alreadyAskedNodes.add(this.id);
 
-                for (NodeInter node:this.childrenNodes.values()) {
+                for (NodeInter node:this.knownNodes.values()) {
                     if (!alreadyAskedNodes.contains(node.getId())) {
                         currentList.putAll(node.getListOfFiles(currentList, alreadyAskedNodes));
                     }
                 }
                 return currentList;
             }
-//        }
     }
 
     @Override
-    public byte[] downloadFileFromServer(String fileHash) throws RemoteException {
+    public byte[] downloadFileFromServer(String fileHash, Integer requestedChunk, Integer chunkSize) throws RemoteException {
         byte [] mydata;
 
         File serverpathfile = filesMap.get(fileHash).getFile();
-        mydata=new byte[(int) serverpathfile.length()];
+        long skipSize = requestedChunk * 1024 * 1024;
+        mydata=new byte[chunkSize];
         FileInputStream in;
         try {
             in = new FileInputStream(serverpathfile);
             try {
+                in.skip(skipSize);
                 in.read(mydata, 0, mydata.length);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -200,32 +170,11 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
         return id;
     }
 
-    public File getFolder() {
-        return folder;
-    }
-
-    public NodeInter getParentNode() {
-        return parentNode;
-    }
-
-    public Map<String, NodeInter> getChildrenNodes() {
-        return childrenNodes;
-    }
-
-    public Map<String, NewFileContents> getFilesMap() {
-        return filesMap;
-    }
-
-    public String getLastAddedNodeId() {
-        return lastAddedNodeId;
-    }
-
-    public void setParentNode(NodeInter parentNode) {
-        this.parentNode = parentNode;
+    public void addKnownNode(NodeInter parentNode) throws RemoteException {
+        this.knownNodes.put(parentNode.getId(), parentNode);
     }
 
     // CLIENT methods
-
     @Override
     public void notifyRegistered(String id) throws RemoteException {
         System.out.println("Notified that node " + id + " was registered");
@@ -242,9 +191,11 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
         System.out.println("3 - Description");
         System.out.println("4 - Keywords");
 
+
+
         int attribute = Integer.parseInt(br.readLine());
         while (attribute < 0 || attribute > 4) {
-            System.out.println("Please select a valid number\n");
+            System.out.println("\nPlease select a valid number\n");
             attribute = Integer.parseInt(br.readLine());
         }
 
@@ -256,7 +207,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
             default -> "";
         };
 
-        System.out.println("Enter string to search in '" + attributeName + "' \n");
+        System.out.println("\nEnter value to search in '" + attributeName + "' \n");
         String line = br.readLine();
 
         return selectByAttribute(fileContentsMap, attributeName, line);
@@ -338,7 +289,8 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     }
 
     @Override
-    public Map<String, NewFileContents> getOwnFiles() throws RemoteException {
+    public Map<String, NewFileContents> getOwnFiles() throws IOException, NoSuchAlgorithmException {
+        updateFilesMap();
         return this.filesMap;
     }
 

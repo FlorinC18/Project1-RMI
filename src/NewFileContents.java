@@ -42,10 +42,6 @@ public class NewFileContents implements Serializable, Remote {
         this.name = name;
     }
 
-    public void addName(String name) {
-        this.name.add(name);
-    }
-
     public void addAllNames(Collection<String> name) {
         this.name.addAll(name);
     }
@@ -56,10 +52,6 @@ public class NewFileContents implements Serializable, Remote {
 
     public void setDescription(List<String> description) {
         this.description = description;
-    }
-
-    public void addDescription(String desc) {
-        this.description.add(desc);
     }
 
     public void addAllDescriptions(Collection<String> desc) {
@@ -74,10 +66,6 @@ public class NewFileContents implements Serializable, Remote {
         this.keywords = keywords;
     }
 
-    public void addKeyword(String keyword) {
-        keywords.add(keyword);
-    }
-
     public void addAllKeywords(Collection<String> keyword) {
         keywords.addAll(keyword);
     }
@@ -85,15 +73,6 @@ public class NewFileContents implements Serializable, Remote {
     public Map<String, List<Integer>> getContainingNodes() {
         return containingNodes;
     }
-
-    public void setContainingNodes(Map<String, List<Integer>> containingNodes) {
-        this.containingNodes = containingNodes;
-    }
-
-    public void addContainingNode(String ip, int port) {
-        this.containingNodes.put(ip, List.of(port));
-    }
-
 
     public void addAllContainingNode(Map<String, List<Integer>> containingNodes) {
         for (String ip: containingNodes.keySet()) {
@@ -113,30 +92,34 @@ public class NewFileContents implements Serializable, Remote {
 
     public String searchByAttribute(String attribute, String attributeValue) {
         switch (attribute) {
-            case "hash": // hash
-                if (getHash().contains(attributeValue))
+            case "hash":
+                if (this.hash.contains(attributeValue))
                     return getHash();
                 break;
-            case "name": // name
-                for (String name : getName()) {
-                    if (name.contains(attributeValue))
+            case "name":
+                for (String name : this.name) {
+                    if (name.toLowerCase().contains(attributeValue.toLowerCase()))
                         return getHash();
                 }
                 break;
-            case "description": // description
-                for (String desc : getDescription()) {
-                    if (desc.contains(attributeValue))
+            case "description":
+                for (String desc : this.description) {
+                    if (desc.toLowerCase().contains(attributeValue.toLowerCase()))
                         return getHash();
                 }
                 break;
-            case "keywords": // keywords
-                for (String kw : getKeywords()) {
-                    if (kw.contains(attributeValue))
+            case "keywords":
+                for (String kw : this.keywords) {
+                    if (kw.toLowerCase().contains(attributeValue.toLowerCase()))
                         return getHash();
                 }
                 break;
         }
         return "";
+    }
+
+    public double getFileLength() {
+        return this.file.length();
     }
 
     @Override

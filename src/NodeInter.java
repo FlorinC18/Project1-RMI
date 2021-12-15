@@ -10,7 +10,7 @@ public interface NodeInter extends Remote {
     // SERVER
     void registerNode(NodeInter node, String id) throws RemoteException;
     Map<String, NewFileContents> getListOfFiles(Map<String, NewFileContents> currentList, List<String> alreadyAskedNodes) throws IOException, NoSuchAlgorithmException;
-    byte[] downloadFileFromServer(String fileHash) throws RemoteException;
+    byte[] downloadFileFromServer(String fileHash, Integer requestedChunk, Integer chunkSize) throws RemoteException;
     String getId() throws RemoteException;
 
 
@@ -23,5 +23,5 @@ public interface NodeInter extends Remote {
     void changeFileDescription(String hash, String description) throws RemoteException;
     void changeFileKeywords(String hash, List<String> keywords) throws RemoteException;
     void deleteFile(String hash) throws IOException, NoSuchAlgorithmException;
-    Map<String, NewFileContents> getOwnFiles() throws RemoteException;
+    Map<String, NewFileContents> getOwnFiles() throws IOException, NoSuchAlgorithmException;
 }
