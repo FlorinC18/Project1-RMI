@@ -265,7 +265,7 @@ public class Node {
     private static Path downloadChunk(Integer chunk, NodeInter stub, String hash, Integer chunkSize, String fileName) {
         try {
             byte[] mydata = stub.downloadFileFromServer(hash, chunk, chunkSize);
-            File clientpathfile = new File(folder.getAbsolutePath() + "\\" + fileName + "-" + chunk); // UBUNTU: canviar "\\" per "/"
+            File clientpathfile = new File(folder.getAbsolutePath() + "/" + fileName + "-" + chunk); // UBUNTU: canviar "\\" per "/"
             FileOutputStream out = new FileOutputStream(clientpathfile);
             out.write(mydata);
             out.flush();
@@ -283,7 +283,7 @@ public class Node {
         Collections.sort(sortedKeys);
         for(int chunk = 0; chunk < chunksMap.size(); chunk ++) {
             byte[] mydata = getChunkFile(chunksMap.get(chunk));
-            File finalFile = new File(folder.getAbsolutePath() + "\\" + fileName); // UBUNTU: canviar "\\" per "/"
+            File finalFile = new File(folder.getAbsolutePath() + "/" + fileName); // UBUNTU: canviar "\\" per "/"
             FileOutputStream out = new FileOutputStream(finalFile, true);
             out.write(mydata);
             out.flush();
