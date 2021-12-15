@@ -3,7 +3,7 @@ import java.io.Serializable;
 import java.rmi.Remote;
 import java.util.*;
 
-public class NewFileContents implements Serializable, Remote {
+public class FileManager implements Serializable, Remote {
     private File file;
     private String hash = "";
     private List<String> name = new ArrayList<>();
@@ -12,7 +12,7 @@ public class NewFileContents implements Serializable, Remote {
     private Map<String, List<Integer>> containingNodes = new HashMap<>();
 
 
-    public NewFileContents(File file, String ip, int rmiPort) {
+    public FileManager(File file, String ip, int rmiPort) {
         this.file = file;
         name.add(file.getName());
         containingNodes.put(ip, List.of(rmiPort));

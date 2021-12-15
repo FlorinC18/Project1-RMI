@@ -10,16 +10,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /*
-    args isolated: isolated port-to-expose path-to-folder-with-contents
-    args connected: connected host-ip host-port port-to-expose path-to-folder-with-contents
-    portatil florin: 192.168.1.131
-    portatil florin-work: 192.168.1.1
-
-    TrueNode:::
     args: port-to-expose path-to-folder host-ip host-port
  */
 
-public class TrueNode {
+public class Node {
     private static int exposedPort;
     private static File folder;
     private static String hostIP;
@@ -58,7 +52,6 @@ public class TrueNode {
         }
 
         if (folder.exists() && folder.isDirectory()) {
-
                 try {
                     node = new NodeImplementation(folder, id, exposedPort);
                     Registry ownRegistry = startRegistry(exposedPort);
@@ -87,7 +80,6 @@ public class TrueNode {
 
     private static void showMenuActions(NodeInter node, Registry registry, NodeInter stub){
         try {
-
             int option = 0;
             System.out.println("\n" +
                     "---------------------------------------\n" +
@@ -96,7 +88,6 @@ public class TrueNode {
                     "|                                     |\n" +
                     "---------------------------------------\n");
             while (true) {
-
                 System.out.println("WHAT DO YOU WANT TO DO?");
                 System.out.println("1 - UPLOAD FILES\n" +
                         "2 - SEARCH & DOWNLOAD FILES\n" +
@@ -107,7 +98,7 @@ public class TrueNode {
                 option = Integer.parseInt(br.readLine());
                 switch (option) {
                     case 1 -> uploadFiles(node);
-                    case 2 -> searchAndDownload(node, registry, stub);
+                    case 2 -> searchAndDownload(node);
                     case 3 -> editYourFiles(node);
                     case 4 -> deleteYourFiles(node);
                     case 5 -> {System.out.println("See you soon!"); System.exit(0);}
@@ -121,146 +112,155 @@ public class TrueNode {
         }
     }
 
+
     private static void uploadFiles(NodeInter node) throws IOException, NoSuchAlgorithmException {
         System.out.println("Please insert the path to the desired file or folder to upload");
         String path = br.readLine();
         node.uploadFile(path);
-        System.out.println("Your files are now:");
+        System.out.println("\nYour files have been updated:");
         showLocalFiles(node);
     }
 
 
-    private static void searchAndDownload(NodeInter node, Registry registry, NodeInter stub) throws IOException, NoSuchAlgorithmException{
+    private static void searchAndDownload(NodeInter node) throws IOException, NoSuchAlgorithmException{
         System.out.println("Which file do you want to download?");
-        Map<String, NewFileContents> contentsOnTheNetwork = new HashMap<>();
+        Map<String, FileManager> contentsOnTheNetwork = new HashMap<>();
         List<String> nodeIds = new ArrayList<>();
         contentsOnTheNetwork = node.getListOfFiles(contentsOnTheNetwork, nodeIds);
         if (contentsOnTheNetwork.isEmpty()) {
             System.out.println("No Files found!");
         } else {
-            for (NewFileContents file: contentsOnTheNetwork.values()) {
+            for (FileManager file: contentsOnTheNetwork.values()) {
                 System.out.println(file.toString());
             }
 
-
             List<String> fileHashes = node.selectFiles(contentsOnTheNetwork, br);
-            Map<String, NewFileContents> ownFiles = node.getOwnFiles();
-            for (String hash: fileHashes) {
-                if (!ownFiles.containsKey(hash)) {
-                    String fileName = contentsOnTheNetwork.get(hash).getName().get(0);
-                    Map<String, List<Integer>> containingNodes = contentsOnTheNetwork.get(hash).getContainingNodes();
-                    int chunkSize = 1024 * 1024;
-                    int lastChunkSize = 0;
-                    double fileLength = contentsOnTheNetwork.get(hash).getFileLength();
-                    int totalBytesRead = 0;
-                    int totalFileChunks = 0;
-                    while (totalBytesRead < fileLength) {
-                        totalFileChunks++;
-                        int bytesRemaining = (int) fileLength - totalBytesRead;
-                        if (bytesRemaining < chunkSize) {
-                            lastChunkSize = bytesRemaining;
-                            totalBytesRead += lastChunkSize;
-                        } else {
-                            totalBytesRead += chunkSize;
-                        }
-                    }
+            Map<String, FileManager> ownFiles = node.getOwnFiles();
 
-                    String[] hostIps = containingNodes.keySet().toArray(new String[0]);
-
-                /* current:
-                Map <Tuple<hostIP, Port>, List<int> chunks>
-                 */
-
-                    Map<Tuple<String, Integer>, List<Integer>> chunksOfEachSource = new HashMap<>();
-
-                    for (int chunk = 0; chunk < totalFileChunks; chunk++) {
-                        // hostsIPs = [A, B]
-                        // chunk = 0...5
-                        // 1: 0%2 = 0 -> A
-                        // 2: 1%2 = 1 -> B
-                        // 3: 2%2 = 0 -> A
-                        // 4: 3%2 = 1 -> B
-                        // 5: 4%2 = 0 -> A
-
-                        String newHostIP = hostIps[chunk % hostIps.length];
-                        List<Integer> ports = containingNodes.get(newHostIP);
-                        int newHostPort = ports.get(chunk % ports.size());
-                        Tuple<String, Integer> source = new Tuple<>(newHostIP, newHostPort);
-                        if (!chunksOfEachSource.containsKey(source)) {
-                            chunksOfEachSource.put(source, List.of(chunk));
-                        } else {
-                            List<Integer> chunkList = chunksOfEachSource.get(source);
-                            chunkList.add(chunk);
-                            chunksOfEachSource.put(source, chunkList);
-                        }
-                    }
-
-                    System.out.println("\nDownloading file '" + fileName + "' ...");
-                    ConcurrentHashMap<Integer, Path> chunksMap = new ConcurrentHashMap<>();
-                    for (Tuple<String, Integer> source : chunksOfEachSource.keySet()) {
-                        hostIP = source.x;
-                        hostPort = source.y;
-                        List<Integer> chunks = chunksOfEachSource.get(source);
-                        try {
-                            // connect to node
-                            registry = LocateRegistry.getRegistry(hostIP, hostPort);
-                            stub = (NodeInter) registry.lookup("Node");
-                            stub.registerNode(node, id);
-
-                            // download each chunk to temporal a file via parallelStream()
-                            NodeInter finalStub = stub;
-                            int finalChunkSize = chunkSize;
-                            int finalTotalFileChunks = totalFileChunks;
-                            int finalLastChunkSize = lastChunkSize;
-                            chunks.parallelStream().forEach(chunk -> {
-                                Path path;
-                                if (chunk == finalTotalFileChunks - 1) {
-                                    path = downloadChunk(chunk, finalStub, hash, finalLastChunkSize, fileName);
-                                } else {
-                                    path = downloadChunk(chunk, finalStub, hash, finalChunkSize, fileName);
-                                }
-                                chunksMap.put(chunk, path);
-                            });
-
-                        } catch (Exception e) {
-                            System.err.println("client exception: " + e.toString());
-                            e.printStackTrace();
-                        }
-                    }
-                    rebuildFileFromChunks(chunksMap, fileName);
-                    System.out.println("Download Completed!\n");
-
-
-//                String newHostIP = (String) containingNodes.keySet().toArray()[0];
-//                int newHostPort = containingNodes.get(newHostIP).get(0);
-//
-//                if (hostIP == null || !hostIP.equals(newHostIP) || hostPort != newHostPort) {
-//                    hostIP = newHostIP;
-//                    hostPort = newHostPort;
-//                    try {
-//                        registry = LocateRegistry.getRegistry(hostIP, hostPort);
-//                        stub = (NodeInter) registry.lookup("Node");
-//                        stub.registerNode(node, id);
-//                    } catch (Exception e) {
-//                        System.err.println("client exception: " + e.toString()); e.printStackTrace();
-//                    }
-//                }
-
-//                byte [] mydata = stub.downloadFileFromServer(hash);
-//                System.out.println("downloading file '" + fileName +"' ...");
-//                File clientpathfile = new File(folder.getAbsolutePath()+ "\\" + fileName); // UBUNTU: canviar "\\" per "/"
-//                FileOutputStream out = new FileOutputStream(clientpathfile);
-//                out.write(mydata);
-//                out.flush();
-//                out.close();
-//                System.out.println("Completed!");
-                }
-            }
+            downloadFiles(fileHashes, ownFiles, contentsOnTheNetwork);
 
         }
-        System.out.println("Your files are now:");
+        System.out.println("\nYour files have been updated:");
         showLocalFiles(node);
     }
+
+
+    private static void downloadFiles(List<String> fileHashes, Map<String, FileManager> ownFiles, Map<String, FileManager> contentsOnTheNetwork) throws IOException {
+        for (String hash: fileHashes) {
+            if (!ownFiles.containsKey(hash)) {
+                String fileName = contentsOnTheNetwork.get(hash).getName().get(0);
+                Map<String, List<Integer>> containingNodes = contentsOnTheNetwork.get(hash).getContainingNodes();
+
+                Map<String, Integer> chunksConfig = getChunksConfig(contentsOnTheNetwork, hash);
+
+                int totalFileChunks = chunksConfig.get("totalFileChunks");
+                int chunkSize = chunksConfig.get("chunkSize");
+                int lastChunkSize = chunksConfig.get("lastChunkSize");
+                    /* current:
+                    Map <Tuple<hostIP, Port>, List<int> chunks>
+                     */
+                Map<Tuple<String, Integer>, List<Integer>> chunksOfEachSource = assignChunksToEachSource(containingNodes, totalFileChunks);
+
+                System.out.println("\nDownloading file '" + fileName + "' ...");
+                ConcurrentHashMap<Integer, Path> chunksMap = downloadOneFile(chunksOfEachSource, chunkSize, totalFileChunks, lastChunkSize, hash, fileName);
+
+                rebuildFileFromChunks(chunksMap, fileName);
+                System.out.println("Download Completed!\n");
+            } else {
+                System.out.println("You already have this file: " + ownFiles.get(hash).getName());
+            }
+        }
+    }
+
+    private static Map<String, Integer> getChunksConfig(Map<String, FileManager> contentsOnTheNetwork, String hash) {
+        int chunkSize = 1024 * 1024;
+        int lastChunkSize = 0;
+        double fileLength = contentsOnTheNetwork.get(hash).getFileLength();
+        int totalBytesRead = 0;
+        int totalFileChunks = 0;
+        while (totalBytesRead < fileLength) {
+            totalFileChunks++;
+            int bytesRemaining = (int) fileLength - totalBytesRead;
+            if (bytesRemaining < chunkSize) {
+                lastChunkSize = bytesRemaining;
+                totalBytesRead += lastChunkSize;
+            } else {
+                totalBytesRead += chunkSize;
+            }
+        }
+        Map<String, Integer> config = new HashMap<>();
+        config.put("totalFileChunks", totalFileChunks);
+        config.put("chunkSize", chunkSize);
+        config.put("lastChunkSize", lastChunkSize);
+        return config;
+    }
+
+
+    private static Map<Tuple<String, Integer>, List<Integer>> assignChunksToEachSource(Map<String, List<Integer>> containingNodes, int totalFileChunks) {
+        Map<Tuple<String, Integer>, List<Integer>> chunksOfEachSource = new HashMap<>();
+        String[] hostIps = containingNodes.keySet().toArray(new String[0]);
+
+        for (int chunk = 0; chunk < totalFileChunks; chunk++) {
+            // hostsIPs = [A, B]
+            // chunk = 0...5
+            // 1: 0%2 = 0 -> A
+            // 2: 1%2 = 1 -> B
+            // 3: 2%2 = 0 -> A
+            // 4: 3%2 = 1 -> B
+            // 5: 4%2 = 0 -> A
+            // round-robin
+
+            String newHostIP = hostIps[chunk % hostIps.length];
+            List<Integer> ports = containingNodes.get(newHostIP);
+            int newHostPort = ports.get(chunk % ports.size());
+            Tuple<String, Integer> source = new Tuple<>(newHostIP, newHostPort);
+            if (!chunksOfEachSource.containsKey(source)) {
+                chunksOfEachSource.put(source, List.of(chunk));
+            } else {
+                List<Integer> chunkList = chunksOfEachSource.get(source);
+                chunkList.add(chunk);
+                chunksOfEachSource.put(source, chunkList);
+            }
+        }
+        return chunksOfEachSource;
+    }
+
+
+    private static ConcurrentHashMap<Integer, Path> downloadOneFile(Map<Tuple<String, Integer>, List<Integer>> chunksOfEachSource, int chunkSize, int totalFileChunks, int lastChunkSize, String hash, String fileName) {
+        ConcurrentHashMap<Integer, Path> chunksMap = new ConcurrentHashMap<>();
+        for (Tuple<String, Integer> source : chunksOfEachSource.keySet()) {
+            hostIP = source.x;
+            hostPort = source.y;
+            List<Integer> chunks = chunksOfEachSource.get(source);
+            try {
+                // connect to node
+                Registry registry = LocateRegistry.getRegistry(hostIP, hostPort);
+                NodeInter stub = (NodeInter) registry.lookup("Node");
+                stub.registerNode(node, id);
+
+                // download each chunk to temporal a file via parallelStream()
+                NodeInter finalStub = stub;
+                int finalChunkSize = chunkSize;
+                int finalTotalFileChunks = totalFileChunks;
+                int finalLastChunkSize = lastChunkSize;
+                chunks.parallelStream().forEach(chunk -> {
+                    Path path;
+                    if (chunk == finalTotalFileChunks - 1) {
+                        path = downloadChunk(chunk, finalStub, hash, finalLastChunkSize, fileName);
+                    } else {
+                        path = downloadChunk(chunk, finalStub, hash, finalChunkSize, fileName);
+                    }
+                    chunksMap.put(chunk, path);
+                });
+
+            } catch (Exception e) {
+                System.err.println("client exception: " + e.toString());
+                e.printStackTrace();
+            }
+        }
+        return chunksMap;
+    }
+
 
     private static Path downloadChunk(Integer chunk, NodeInter stub, String hash, Integer chunkSize, String fileName) {
         try {
@@ -350,7 +350,7 @@ public class TrueNode {
                 node.changeFileKeywords(hash, keywords);
             }
         }
-        System.out.println("\nYour files are now:");
+        System.out.println("\nYour files have been updated:");
         showLocalFiles(node);
     }
 
@@ -360,12 +360,12 @@ public class TrueNode {
         System.out.println("\nPlease select the file you want to delete:");
 
         node.deleteFile(getFileHash(namingMap));
-        System.out.println("\nYour files are now:");
+        System.out.println("\nYour files have been updated:");
         showLocalFiles(node);
     }
 
     private static Map<String, String> showLocalFiles(NodeInter node) throws IOException, NoSuchAlgorithmException {
-        Map<String, NewFileContents> ownFiles = node.getOwnFiles();
+        Map<String, FileManager> ownFiles = node.getOwnFiles();
         Map<String, String> namingMap = new HashMap<>();
         for (String key: ownFiles.keySet()) {
             String name = ownFiles.get(key).getName().get(0);

@@ -15,18 +15,15 @@ import java.util.*;
 public class NodeImplementation extends UnicastRemoteObject implements NodeInter {
     private String id;
     private File folder;
-//    private NodeInter parentNode = null;
     private Map<String, NodeInter> knownNodes = new HashMap<>();
-    private Map<String, NewFileContents> filesMap = new HashMap<>();
+    private Map<String, FileManager> filesMap = new HashMap<>();
     private String lastAddedNodeId;
     private String ip;
     private int rmiPort;
 
-    // isolated
     protected NodeImplementation(File folder, String ownId, int rmiPort) throws IOException, NoSuchAlgorithmException {
         this.folder = folder;
         this.id = ownId;
-//        this.parentNode = null;
         try(final DatagramSocket socket = new DatagramSocket()){
             socket.connect(InetAddress.getByName("8.8.8.8"), 10002);
             ip = socket.getLocalAddress().getHostAddress();
@@ -35,9 +32,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
         updateFilesMap();
     }
 
-
-    // SERVER methods
-
+    // Server methods
     @Override
     public void registerNode(NodeInter node, String id) throws RemoteException {
         System.out.println("Registering node " + id + " ...");
@@ -46,15 +41,15 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     }
 
     @Override
-    public Map<String, NewFileContents> getListOfFiles(Map<String, NewFileContents> currentList, List<String> alreadyAskedNodes) throws IOException, NoSuchAlgorithmException {
+    public Map<String, FileManager> getListOfFiles(Map<String, FileManager> currentList, List<String> alreadyAskedNodes) throws IOException, NoSuchAlgorithmException {
             if (alreadyAskedNodes.contains(this.id)) {
                 return currentList;
             } else {
                 updateFilesMap();
                 for (String fileContentsHash : this.filesMap.keySet()) {
                     if (currentList.containsKey(fileContentsHash)) {
-                        NewFileContents fileContents = currentList.get(fileContentsHash);
-                        NewFileContents sameFileContents = this.filesMap.get(fileContentsHash);
+                        FileManager fileContents = currentList.get(fileContentsHash);
+                        FileManager sameFileContents = this.filesMap.get(fileContentsHash);
                         fileContents.addAllNames(sameFileContents.getName());
                         fileContents.addAllDescriptions(sameFileContents.getDescription());
                         fileContents.addAllKeywords(sameFileContents.getKeywords());
@@ -114,7 +109,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
 
             // Update filesMap if any file has been added to the content folder
             if (!filesMap.containsKey(hash)) {
-                NewFileContents fileContents = new NewFileContents(fileEntry, ip, rmiPort);
+                FileManager fileContents = new FileManager(fileEntry, ip, rmiPort);
                 fileContents.setHash(hash);
                 fileContents.setFile(fileEntry);
                 filesMap.put(hash, fileContents);
@@ -184,12 +179,12 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     }
 
     @Override
-    public List<String> selectFiles(Map<String, NewFileContents> fileContentsMap, BufferedReader br) throws IOException {
+    public List<String> selectFiles(Map<String, FileManager> fileContentsMap, BufferedReader br) throws IOException {
         System.out.println("Enter attribute to search by:");
         System.out.println("1 - Hash code of the desired file");
         System.out.println("2 - Name");
         System.out.println("3 - Description");
-        System.out.println("4 - Keywords");
+        System.out.println("4 - Keywords\n");
 
 
 
@@ -213,16 +208,16 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
         return selectByAttribute(fileContentsMap, attributeName, line);
     }
 
-    private ArrayList<String> selectByAttribute(Map<String, NewFileContents> fileContentsMap, String attribute, String line) {
+    private ArrayList<String> selectByAttribute(Map<String, FileManager> fileContentsMap, String attribute, String line) {
 
         ArrayList<String> files = new ArrayList<>();
-        ArrayList<NewFileContents> fileContentsList = new ArrayList<>(fileContentsMap.values());
+        ArrayList<FileManager> fileContentsList = new ArrayList<>(fileContentsMap.values());
 
         StringTokenizer st = new StringTokenizer(line);
 
         while (st.hasMoreTokens()) {
             String attributeValue = st.nextToken();
-            for (NewFileContents file : fileContentsList) {
+            for (FileManager file : fileContentsList) {
                 String hash = file.searchByAttribute(attribute, attributeValue);
                 if (!hash.equals(""))
                     files.add(hash);
@@ -252,7 +247,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     @Override
     public void changeFileName(String hash, String name) throws IOException {
         if(filesMap.containsKey(hash)) {
-            NewFileContents fileContents = filesMap.get(hash);
+            FileManager fileContents = filesMap.get(hash);
             fileContents.setName(List.of(name));
             Path source = Paths.get(fileContents.getFile().getAbsolutePath());
             Files.move(source, source.resolveSibling(name));
@@ -262,7 +257,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     @Override
     public void changeFileDescription(String hash, String description)  throws RemoteException{
         if(filesMap.containsKey(hash)) {
-            NewFileContents fileContents = filesMap.get(hash);
+            FileManager fileContents = filesMap.get(hash);
             fileContents.setDescription(List.of(description));
         }
     }
@@ -270,7 +265,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     @Override
     public void changeFileKeywords(String hash, List<String> keywords)  throws RemoteException{
         if (filesMap.containsKey(hash)) {
-            NewFileContents fileContents = filesMap.get(hash);
+            FileManager fileContents = filesMap.get(hash);
             fileContents.setKeywords(keywords);
         }
     }
@@ -278,7 +273,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     @Override
     public void deleteFile(String hash) throws IOException, NoSuchAlgorithmException {
         if (filesMap.containsKey(hash)) {
-            NewFileContents fileContents = filesMap.get(hash);
+            FileManager fileContents = filesMap.get(hash);
             if(fileContents.getFile().delete()) {
                 updateFilesMap();
                 System.out.println("File deleted successfully!");
@@ -289,7 +284,7 @@ public class NodeImplementation extends UnicastRemoteObject implements NodeInter
     }
 
     @Override
-    public Map<String, NewFileContents> getOwnFiles() throws IOException, NoSuchAlgorithmException {
+    public Map<String, FileManager> getOwnFiles() throws IOException, NoSuchAlgorithmException {
         updateFilesMap();
         return this.filesMap;
     }
